@@ -1,0 +1,59 @@
+name: Publish to Packagist
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Cache Composer packages
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist
+
+      - name: Publish to Packagist
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+          PACKAGIST_PACKAGE: ${{ secrets.PACKAGIST_PACKAGE }}
+        run: |
+          composer config --global --auth http-basic.packagist.org ${{ secrets.PACKAGIST_USERNAME }} ${{ secrets.PACKAGIST_TOKEN }}
+          composer config repo.packagist composer https://repo.packagist.org
+          composer dump-autoload --optimize
+          curl -X POST -H "Content-Type: application/json" -d '{"repository":{"url":"https://github.com/'${{ github.repository }}'"}}' "https://packagist.org/api/update-package?username=${{ secrets.PACKAGIST_USERNAME }}&api_token=${{ secrets.PACKAGIST_TOKEN }}"
+
+      - name: Publish Release to Packagist
+        if: github.event_name == 'release' && github.event.action == 'published'
+        env:
+          PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+          PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+        run: |
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          composer config --global --auth http-basic.packagist.org ${{ secrets.PACKAGIST_USERNAME }} ${{ secrets.PACKAGIST_TOKEN }}
+          composer config repo.packagist composer https://repo.packagist.org
+          composer dump-autoload --optimize
+          curl -X POST -H "Content-Type: application/json" -d '{"repository":{"url":"https://github.com/'${{ github.repository }}'"},"version":"'$TAG_NAME'"}' "https://packagist.org/api/update-package?username=${{ secrets.PACKAGIST_USERNAME }}&api_token=${{ secrets.PACKAGIST_TOKEN }}"
