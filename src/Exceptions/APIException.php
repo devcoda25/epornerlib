@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace EpornerLib\Exceptions;
 
+use GuzzleHttp\Exception\RequestException;
+use GuzzleHttp\Psr7\Response;
+
 /**
  * Exception thrown when the API returns an error
  */
@@ -14,8 +17,8 @@ class APIException extends EpornerException
 
     public function __construct(
         string $message,
-        int $statusCode = null,
-        string $responseBody = null,
+        ?int $statusCode = null,
+        ?string $responseBody = null,
         ?\Throwable $previous = null
     ) {
         parent::__construct($message, $statusCode ?? 0, $previous);
@@ -43,7 +46,7 @@ class APIException extends EpornerException
      * Create an exception from a Guzzle response
      */
     public static function fromGuzzleResponse(
-        \GuzzleHttp\Psr7\Response $response,
+        Response $response,
         ?\Throwable $previous = null
     ): self {
         $statusCode = $response->getStatusCode();
@@ -58,7 +61,7 @@ class APIException extends EpornerException
      * Create an exception from a network error
      */
     public static function fromNetworkError(
-        \GuzzleHttp\Exception\RequestException $exception
+        RequestException $exception
     ): self {
         $response = $exception->getResponse();
 

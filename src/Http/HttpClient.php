@@ -8,7 +8,7 @@ use EpornerLib\Constants\API;
 use EpornerLib\Exceptions\APIException;
 use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
+use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\Psr7\Request;
 use Psr\Http\Message\ResponseInterface;
 
@@ -46,7 +46,7 @@ class HttpClient
 
         try {
             return $this->client->send($request);
-        } catch (GuzzleException $e) {
+        } catch (RequestException $e) {
             throw APIException::fromNetworkError($e);
         }
     }
